@@ -7,6 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'PinyinFont';
+            font-style: normal;
+            font-weight: 500;
+            font-display: swap;
+            src: url('./assets/fonts/noto-sans-500.ttf') format('truetype');
+        }
+
         :root {
             --theme-pink-50: #fff1f2;
             --theme-pink-100: #ffe4e6;
@@ -27,6 +35,49 @@
             background: linear-gradient(135deg, var(--theme-pink-50) 0%, #fce7f3 100%);
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        .pinyin-text {
+            font-family: 'PinyinFont', 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-weight: 500;
+            font-size: 0.72rem;
+            line-height: 1;
+            letter-spacing: 0.02em;
+            color: rgba(190, 18, 60, 0.92);
+            font-variant-ligatures: none;
+            font-synthesis: none;
+            text-transform: none;
+        }
+
+        .category-button-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-button-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.05;
+        }
+
+        .category-hanzi-text {
+            line-height: 1.1;
+        }
+
+        .translation-pinyin {
+            margin-bottom: 0.15rem;
+        }
+
+        .chinese-translation {
+            margin-top: 0.25rem;
+        }
+
+        @media (max-width: 640px) {
+            .pinyin-text {
+                font-size: 0.66rem;
+            }
         }
         
         /* 移动端优化 */
@@ -966,6 +1017,7 @@
         </footer>
     </div>
 
+    <script src="./assets/vendor/pinyin-pro-3.28.0.js"></script>
     <script>
         const phrasesData = [
             {
@@ -1230,6 +1282,71 @@
         const categoryBrowseButton = document.getElementById('category-browse-button');
         const learningHubButton = document.getElementById('learning-hub-button');
         const learningHubContainer = document.getElementById('learning-hub-container');
+
+        const CATEGORY_PINYIN = {
+            "问候及祝福": "wèn hòu jí zhù fú",
+            "日常生活": "rì cháng shēng huó",
+            "进餐相关": "jìn cān xiāng guān",
+            "赞美及鼓励": "zàn měi jí gǔ lì",
+            "游戏及指令": "yóu xì jí zhǐ lìng",
+            "感冒生病": "gǎn mào shēng bìng",
+            "户外活动": "hù wài huó dòng",
+            "学习与课堂": "xué xí yǔ kè táng",
+            "情绪与感受": "qíng xù yǔ gǎn shòu",
+            "颜色、数字、形状": "yán sè · shù zì · xíng zhuàng",
+            "动物与大自然": "dòng wù yǔ dà zì rán",
+            "家庭与朋友": "jiā tíng yǔ péng yǒu",
+            "提问与回答": "tí wèn yǔ huí dá"
+        };
+
+        function normalizePinyinForDisplay(pinyinText) {
+            if (!pinyinText) return '';
+
+            return pinyinText
+                .replaceAll('ā', 'ɑ\u0304')
+                .replaceAll('á', 'ɑ\u0301')
+                .replaceAll('ǎ', 'ɑ\u030C')
+                .replaceAll('à', 'ɑ\u0300')
+                .replaceAll('a', 'ɑ');
+        }
+
+        function getPinyinWithToneMarksForHanzi(hanziText) {
+            const pinyinFn = window.pinyinPro?.pinyin;
+            if (typeof pinyinFn !== 'function' || !hanziText) return '';
+
+            return pinyinFn(hanziText, { toneType: 'mark' });
+        }
+
+        function buildCategoryButtonLabel({ icon, hanzi, pinyin }) {
+            const label = document.createElement('span');
+            label.className = 'category-button-label';
+
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'text-lg leading-none';
+            iconSpan.textContent = icon;
+
+            const textCol = document.createElement('span');
+            textCol.className = 'category-button-text';
+
+            const pinyinSpan = document.createElement('span');
+            pinyinSpan.className = 'pinyin-text';
+            const normalizedPinyin = normalizePinyinForDisplay(pinyin);
+            pinyinSpan.textContent = normalizedPinyin;
+            if (!normalizedPinyin) {
+                pinyinSpan.style.display = 'none';
+            }
+
+            const hanziSpan = document.createElement('span');
+            hanziSpan.className = 'category-hanzi-text';
+            hanziSpan.textContent = hanzi;
+
+            textCol.appendChild(pinyinSpan);
+            textCol.appendChild(hanziSpan);
+
+            label.appendChild(iconSpan);
+            label.appendChild(textCol);
+            return label;
+        }
 
         const learningPlanTabButton = document.getElementById('learning-plan-tab-button');
         const reviewPlanTabButton = document.getElementById('review-plan-tab-button');
@@ -1667,7 +1784,11 @@
             
             phrasesData.forEach((category, index) => {
                 const button = document.createElement('button');
-                button.innerHTML = `${categoryIcons[index] || '📝'} ${category.category}`;
+                button.appendChild(buildCategoryButtonLabel({
+                    icon: categoryIcons[index] || '📝',
+                    hanzi: category.category,
+                    pinyin: CATEGORY_PINYIN[category.category] || ''
+                }));
                 button.classList.add('nav-button', 'py-3', 'px-4', 'sm:px-5', 'rounded-xl', 'text-sm', 'sm:text-base', 'font-medium', 'tooltip');
                 button.setAttribute('data-tooltip', category.introduction);
                 
@@ -1731,7 +1852,10 @@
                 card.innerHTML = `
                     <div class="flex-1">
                         <p class="text-lg sm:text-xl font-semibold text-pink-700 mb-3 leading-relaxed">${phrase.en}</p>
-                        <p class="chinese-translation text-stone-600 text-base sm:text-lg hidden transition-all duration-300 ease-in-out transform translate-y-2 opacity-0">${phrase.zh}</p>
+                        <div class="chinese-translation hidden transition-all duration-300 ease-in-out transform translate-y-2 opacity-0">
+                            <div class="pinyin-text translation-pinyin"></div>
+                            <div class="translation-hanzi text-stone-600 text-base sm:text-lg">${phrase.zh}</div>
+                        </div>
                     </div>
                     <div class="mt-4 pt-4 border-t border-gradient-to-r from-pink-200 to-rose-200">
                         <div class="flex justify-between items-center gap-2">
@@ -1751,21 +1875,30 @@
                 `;
 
                 const toggleButton = card.querySelector('.toggle-translation-button');
-                const translationP = card.querySelector('.chinese-translation');
+                const translationContainer = card.querySelector('.chinese-translation');
+                const translationPinyin = card.querySelector('.translation-pinyin');
                 toggleButton.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const isHidden = translationP.classList.contains('hidden');
+                    const isHidden = translationContainer.classList.contains('hidden');
                     
                     if (isHidden) {
-                        translationP.classList.remove('hidden', 'translate-y-2', 'opacity-0');
-                        translationP.classList.add('translate-y-0', 'opacity-100');
+                        if (!translationContainer.dataset.pinyinReady) {
+                            const rawPinyin = getPinyinWithToneMarksForHanzi(phrase.zh);
+                            const normalizedPinyin = normalizePinyinForDisplay(rawPinyin);
+                            translationPinyin.textContent = normalizedPinyin;
+                            translationPinyin.style.display = normalizedPinyin ? '' : 'none';
+                            translationContainer.dataset.pinyinReady = '1';
+                        }
+
+                        translationContainer.classList.remove('hidden', 'translate-y-2', 'opacity-0');
+                        translationContainer.classList.add('translate-y-0', 'opacity-100');
                         toggleButton.innerHTML = '🔤 隐藏';
                         toggleButton.setAttribute('data-tooltip', '隐藏中文翻译');
                     } else {
-                        translationP.classList.add('translate-y-2', 'opacity-0');
+                        translationContainer.classList.add('translate-y-2', 'opacity-0');
                         setTimeout(() => {
-                            translationP.classList.add('hidden');
-                            translationP.classList.remove('translate-y-0', 'opacity-100');
+                            translationContainer.classList.add('hidden');
+                            translationContainer.classList.remove('translate-y-0', 'opacity-100');
                         }, 300);
                         toggleButton.innerHTML = '🔤 翻译';
                         toggleButton.setAttribute('data-tooltip', '显示中文翻译');
